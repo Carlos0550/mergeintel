@@ -54,43 +54,39 @@ Ask questions about the PR in natural language. The AI has full context of every
 
 | Layer | Technology |
 |---|---|
-| GitHub integration | GitHub REST API v3 / Octokit |
-| Backend | Node.js + TypeScript + Express |
-| AI analysis | Python + FastAPI + LLM (Anthropic / OpenAI / Ollama) |
+| GitHub integration | GitHub REST API v3 via `httpx` |
+| Backend | Python + FastAPI |
+| AI analysis | Anthropic SDK / OpenAI SDK / Ollama |
 | Frontend | React + TypeScript |
-| Database | PostgreSQL |
+| Database | PostgreSQL via `asyncpg` |
 | CI integration | GitHub Actions |
 
 ---
 
 ## Architecture
 
+Single backend — FastAPI handles everything: GitHub integration, AI analysis, and serving the built frontend.
+
 ```
 GitHub PR
     │
     ▼
-GitHub API ──► Commit parser
-                    │
-                    ├── Author mapper        (who touched what)
-                    ├── File diff analyzer   (what changed)
-                    ├── Schema detector      (SQL / Alembic / ORM)
-                    └── Branch age checker   (divergence from main)
-                    │
-                    ▼
-              AI Analysis Engine (Python / LLM)
-                    │
-                    ├── Summary generator
-                    ├── Out-of-scope detector
-                    ├── Risk scorer
-                    └── Chat context builder
-                    │
-                    ▼
-              Dashboard (React)
-                    │
-                    ├── Per-author breakdown
-                    ├── Pre-merge checklist
-                    ├── Schema changes panel
-                    └── AI chat interface
+FastAPI backend
+    │
+    ├── github/         GitHub API client (httpx)
+    │       ├── Commit parser
+    │       ├── Author mapper        (who touched what)
+    │       ├── File diff analyzer   (what changed)
+    │       ├── Schema detector      (SQL / Alembic / ORM models)
+    │       └── Branch age checker   (divergence from main)
+    │
+    ├── analyzer/       AI analysis layer
+    │       ├── Summary generator
+    │       ├── Out-of-scope detector
+    │       ├── Risk scorer
+    │       └── Chat context builder
+    │
+    └── api/            REST endpoints consumed by the React dashboard
 ```
 
 ---
@@ -121,14 +117,28 @@ Out of scope for MVP:
 
 ```
 mergeintel/
-├── apps/
-│   ├── web/          # React dashboard
-│   └── api/          # Node.js + TypeScript backend
-├── services/
-│   └── analyzer/     # Python + FastAPI AI analysis service
-├── packages/
-│   └── github/       # GitHub API client (shared)
-└── docker-compose.yml
+├── backend/
+│   ├── main.py                  # FastAPI app entry point
+│   ├── routers/
+│   │   ├── pr.py                # PR analysis endpoints
+│   │   └── chat.py              # AI chat endpoints
+│   ├── github/
+│   │   ├── client.py            # GitHub API client (httpx)
+│   │   ├── commits.py           # Commit + author parser
+│   │   ├── diff.py              # File diff analyzer
+│   │   └── divergence.py        # Branch age / divergence checker
+│   ├── analyzer/
+│   │   ├── summary.py           # LLM summary generator
+│   │   ├── scope.py             # Out-of-scope file detector
+│   │   ├── schema.py            # SQL / Alembic / ORM change detector
+│   │   └── chat.py              # Chat context + LLM handler
+│   ├── models/                  # Pydantic schemas
+│   └── db/                      # asyncpg database layer
+├── frontend/                    # React + TypeScript dashboard
+├── alembic/                     # DB migrations
+├── .env.example
+├── docker-compose.yml
+└── requirements.txt
 ```
 
 ---
@@ -142,14 +152,21 @@ mergeintel/
 git clone https://github.com/your-username/mergeintel.git
 cd mergeintel
 
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
 # Install dependencies
-npm install
+pip install -r requirements.txt
 
 # Set up environment variables
 cp .env.example .env
 
+# Run database migrations
+alembic upgrade head
+
 # Start development
-npm run dev
+uvicorn backend.main:app --reload
 ```
 
 ---
