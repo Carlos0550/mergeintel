@@ -186,7 +186,18 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/mergeintel
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+LOG_ENABLE_STDOUT=true
+LOG_ENABLE_FILE=true
+LOG_FILE_PATH=/var/log/mergeintel/app.log
+LOG_FILE_MAX_BYTES=10485760
+LOG_FILE_BACKUP_COUNT=5
 ```
+
+When `LOG_ENABLE_FILE=true`, the application expects the configured log path to be writable. The default file target is `/var/log/mergeintel/app.log`, so Docker or server deployments should mount that directory or override it with a writable path such as `LOG_FILE_PATH=/tmp/mergeintel/app.log` for local development.
 
 ---
 

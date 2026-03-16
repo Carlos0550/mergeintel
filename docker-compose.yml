@@ -1,0 +1,25 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    restart: unless-stopped
+    environment:
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      GITHUB_API_BASE_URL: ${GITHUB_API_BASE_URL:-https://api.github.com}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://localhost:11434}
+      AI_PROVIDER: ${AI_PROVIDER:-anthropic}
+      AI_MODEL: ${AI_MODEL:-claude-sonnet-4-20250514}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/mergeintel}
+      APP_ENV: ${APP_ENV:-development}
+      APP_PORT: ${APP_PORT:-8000}
+    volumes:
+      - .:/app
+    ports:
+      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
