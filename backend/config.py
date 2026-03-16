@@ -32,6 +32,17 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     APP_PORT: int = 8000
     APP_TIMEZONE: str = "America/Argentina/Buenos_Aires"
+    MAIL_FROM: str = "no-reply@example.com"
+    MAIL_FROM_NAME: str = "MergeIntel"
+    MAIL_SERVER: str = "mailpit"
+    MAIL_PORT: int = 1025
+    MAIL_USERNAME: str = ""
+    MAIL_PASSWORD: str = ""
+    MAIL_STARTTLS: bool = False
+    MAIL_SSL_TLS: bool = False
+    MAIL_USE_CREDENTIALS: bool = False
+    MAIL_VALIDATE_CERTS: bool = False
+    RESEND_API_KEY: str | None = None
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
     LOG_ENABLE_STDOUT: bool = True

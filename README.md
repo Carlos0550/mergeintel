@@ -187,6 +187,19 @@ OLLAMA_BASE_URL=http://localhost:11434
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/mergeintel
 
+# Mail
+MAIL_FROM=no-reply@example.com
+MAIL_FROM_NAME=MergeIntel
+MAIL_SERVER=mailpit
+MAIL_PORT=1025
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_STARTTLS=false
+MAIL_SSL_TLS=false
+MAIL_USE_CREDENTIALS=false
+MAIL_VALIDATE_CERTS=false
+RESEND_API_KEY=
+
 # Logging
 LOG_LEVEL=INFO
 LOG_FORMAT=json
@@ -198,6 +211,19 @@ LOG_FILE_BACKUP_COUNT=5
 ```
 
 When `LOG_ENABLE_FILE=true`, the application expects the configured log path to be writable. The default file target is `/var/log/mergeintel/app.log`, so Docker or server deployments should mount that directory or override it with a writable path such as `LOG_FILE_PATH=/tmp/mergeintel/app.log` for local development.
+
+## Email delivery
+
+In local development, email works out of the box with Mailpit through Docker Compose.
+
+- SMTP host: `mailpit`
+- SMTP port: `1025`
+- Mailpit web UI: `http://localhost:8025`
+- Default sender: `MergeIntel <no-reply@example.com>`
+
+Non-production environments use `fastapi-mail` against that local SMTP server by default, so you can inspect outgoing emails in Mailpit without defining extra variables.
+
+In production, the application switches to `resend`. `RESEND_API_KEY` is required in that environment; startup will fail fast if it is missing.
 
 ---
 

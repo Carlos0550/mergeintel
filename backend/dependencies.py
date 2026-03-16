@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.config import Settings, settings
 from backend.db.connection import get_session_factory
+from backend.services.mail import MailService, build_mail_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,12 @@ async def get_db_session() -> AsyncIterator[AsyncSession]:
     session_factory = get_session_factory()
     async with session_factory() as session:
         yield session
+
+
+async def get_mail_service() -> MailService:
+    """Return the configured mail service for the current environment."""
+
+    return build_mail_service(settings)
 
 
 # async def get_github_client() -> AsyncIterator[GitHubClient]:

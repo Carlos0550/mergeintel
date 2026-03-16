@@ -19,7 +19,27 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/mergeintel}
       APP_ENV: ${APP_ENV:-development}
       APP_PORT: ${APP_PORT:-8000}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@example.com}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-MergeIntel}
+      MAIL_SERVER: ${MAIL_SERVER:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-false}
+      MAIL_SSL_TLS: ${MAIL_SSL_TLS:-false}
+      MAIL_USE_CREDENTIALS: ${MAIL_USE_CREDENTIALS:-false}
+      MAIL_VALIDATE_CERTS: ${MAIL_VALIDATE_CERTS:-false}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    depends_on:
+      - mailpit
     volumes:
       - .:/app
     ports:
       - "${APP_PORT:-8000}:${APP_PORT:-8000}"
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"

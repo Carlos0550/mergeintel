@@ -19,6 +19,7 @@ configure_logging(settings)
 
 from backend.db.connection import close_engine, create_session_factory
 from backend.routers.authentication import router as authentication_router
+from backend.services.mail import build_mail_service
 
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     )
 
     try:
+        build_mail_service(settings)
         await create_session_factory()
         logger.info(
             "Database session factory initialized",
@@ -41,7 +43,19 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         )
 
         #limpiar consola
-        os.system("cls" if os.name == "nt" else "clear")
+        if os.getenv("TERM"):
+            os.system("cls" if os.name == "nt" else "clear")
+
+        if settings.APP_ENV.lower() != "production":
+            logger.info(
+                "Development email mailbox available",
+                extra={
+                    "provider": "fastapi-mail",
+                    "mail_ui_url": "http://localhost:8025",
+                    "mail_server": settings.MAIL_SERVER,
+                    "mail_port": settings.MAIL_PORT,
+                },
+            )
     except Exception:
         logger.exception(
             "Application startup failed",

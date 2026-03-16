@@ -5,8 +5,10 @@ from __future__ import annotations
 import logging
 
 from backend.models.user import User, UserRole, UserStatus
+from backend.services.mail import EmailPayload, MailService, render_html_template
 from backend.schemas.user_managment import CreateUserRequest, CurrentUser
 from backend.utils.security import hash_string
+from backend.utils.text import capitalize_words
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,10 +22,12 @@ class UserService:
     def __init__(
         self,
         session: AsyncSession,
+        mail_service: MailService,
         *,
         current_user: CurrentUser | None = None,
     ) -> None:
         self.session = session
+        self.mail_service = mail_service
         self.current_user = current_user
 
     async def create_user(self, data: CreateUserRequest) -> User:
@@ -37,14 +41,17 @@ class UserService:
         self.session.add(user)
         try:
             await self.session.commit()
-            await self.session.refresh(user)
-            logger.info(
-                "User created successfully",
-                extra={
-                    "user_id": str(user.id),
-                    "user_role": user.role.value,
-                    "user_status": user.status.value,
-                },
+            html_content = render_html_template(
+                "backend/templates/welcome.html",
+                user_name=capitalize_words(user.name),
+                user_email=user.email,
+            )
+            await self.mail_service.send_email(
+                EmailPayload(
+                    to=[user.email],
+                    subject="Welcome to MergeIntel",
+                    html=html_content,
+                )
             )
             return user
         except SQLAlchemyError:
