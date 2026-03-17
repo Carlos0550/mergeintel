@@ -109,7 +109,7 @@ class GitHubClient:
             )
         if response.status_code == 403 and response.headers.get("x-ratelimit-remaining") == "0":
             raise GitHubRateLimitError(
-                "GitHub rate limit exceeded.",
+                "Se excedió el rate limit de GitHub.",
                 err_code="GITHUB_RATE_LIMIT_EXCEEDED",
                 status_code=429,
             )

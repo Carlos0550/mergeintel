@@ -265,12 +265,33 @@ class PRService:
     @staticmethod
     def _build_checklist(schema_analysis, risk_analysis) -> list[dict[str, str]]:
         checklist: list[dict[str, str]] = []
+        if schema_analysis.migration_files or schema_analysis.orm_model_files or schema_analysis.sql_files:
+            schema_details: list[str] = []
+            if schema_analysis.migration_files:
+                schema_details.append(
+                    f"Migraciones detectadas: {', '.join(schema_analysis.migration_files[:5])}"
+                )
+            if schema_analysis.orm_model_files:
+                schema_details.append(
+                    f"Modelos ORM tocados: {', '.join(schema_analysis.orm_model_files[:5])}"
+                )
+            if schema_analysis.sql_files:
+                schema_details.append(
+                    f"Archivos SQL tocados: {', '.join(schema_analysis.sql_files[:5])}"
+                )
+            checklist.append(
+                {
+                    "title": "Validar cambios de schema antes del merge",
+                    "details": " | ".join(schema_details),
+                    "severity": ChecklistSeverity.HIGH.value,
+                }
+            )
         for warning in schema_analysis.warnings:
             checklist.append(
                 {
                     "title": "Revisar migraciones y schema",
                     "details": warning,
-                    "severity": ChecklistSeverity.HIGH.value,
+                    "severity": ChecklistSeverity.CRITICAL.value,
                 }
             )
         for reason in risk_analysis.reasons:
@@ -284,7 +305,7 @@ class PRService:
         if not checklist:
             checklist.append(
                 {
-                    "title": "Validacion general",
+                    "title": "Validación general",
                     "details": "No se detectaron alertas estaticas fuertes, revisar cobertura y comportamiento funcional.",
                     "severity": ChecklistSeverity.LOW.value,
                 }

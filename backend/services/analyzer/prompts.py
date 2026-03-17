@@ -9,13 +9,14 @@ from backend.services.github.types import PRAnalysisInput
 
 
 SUMMARY_SYSTEM_PROMPT = (
-    "You are MergeIntel, an assistant that summarizes GitHub pull requests for engineering teams. "
-    "Be concrete, technical, and action-oriented."
+    "Eres MergeIntel, un asistente técnico que resume pull requests para equipos de ingeniería. "
+    "Responde siempre en español. Sé concreto, técnico y orientado a acciones. "
+    "No mezcles idiomas salvo nombres propios, rutas, identificadores o texto original del código."
 )
 
 CHAT_SYSTEM_PROMPT = (
-    "You are MergeIntel chat. Answer questions strictly using the persisted PR analysis context. "
-    "If the answer is uncertain, say so explicitly."
+    "Eres el chat técnico de MergeIntel. Responde siempre en español y solo usando el contexto persistido del análisis del PR. "
+    "Si algo no es seguro, dilo explícitamente."
 )
 
 
@@ -37,20 +38,21 @@ def build_summary_prompt(
     ]
 
     return (
-        f"Repository: {analysis_input.metadata.owner}/{analysis_input.metadata.repo}\n"
+        f"Repositorio: {analysis_input.metadata.owner}/{analysis_input.metadata.repo}\n"
         f"PR: #{analysis_input.metadata.number} - {analysis_input.metadata.title}\n"
-        f"Base: {analysis_input.metadata.base_branch}\n"
-        f"Head: {analysis_input.metadata.head_branch}\n"
-        f"Divergence days: {analysis_input.divergence_days}\n"
-        f"Risk score: {risk_analysis.score}\n"
-        f"Risk reasons: {risk_analysis.reasons}\n"
-        f"Schema warnings: {schema_analysis.warnings}\n"
-        f"Migration files: {schema_analysis.migration_files}\n"
-        "Authors:\n"
+        f"Rama base: {analysis_input.metadata.base_branch}\n"
+        f"Rama head: {analysis_input.metadata.head_branch}\n"
+        f"Días de divergencia: {analysis_input.divergence_days}\n"
+        f"Puntaje de riesgo: {risk_analysis.score}\n"
+        f"Motivos de riesgo: {risk_analysis.reasons}\n"
+        f"Advertencias de schema: {schema_analysis.warnings}\n"
+        f"Archivos de migración: {schema_analysis.migration_files}\n"
+        "Autores:\n"
         f"{chr(10).join(author_lines)}\n\n"
-        "Important file changes:\n"
+        "Cambios importantes en archivos:\n"
         f"{chr(10).join(diff_lines)}\n\n"
-        "Write a concise technical summary, key risks, and concrete next review actions."
+        "Escribe un resumen técnico conciso, los riesgos principales y las próximas acciones concretas de revisión. "
+        "Todo el texto de salida debe estar en español."
     )
 
 
@@ -65,9 +67,9 @@ def build_chat_context(
     """Build the contextual user prompt for chat interactions."""
 
     return (
-        f"Analysis summary:\n{truncate_text(analysis_summary, limit=3000)}\n\n"
+        f"Resumen del análisis:\n{truncate_text(analysis_summary, limit=3000)}\n\n"
         f"Checklist:\n{chr(10).join(checklist_lines)}\n\n"
-        f"Files:\n{chr(10).join(file_lines[:40])}\n\n"
-        f"Conversation history:\n{chr(10).join(history_lines[-12:])}\n\n"
-        f"User question:\n{user_message}"
+        f"Archivos:\n{chr(10).join(file_lines[:40])}\n\n"
+        f"Historial de conversación:\n{chr(10).join(history_lines[-12:])}\n\n"
+        f"Pregunta del usuario:\n{user_message}"
     )

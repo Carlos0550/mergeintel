@@ -36,7 +36,15 @@ class ChatService:
         self.session.add(user_record)
         await self.session.flush()
 
-        history_lines = [f"{item.role.value}: {item.content}" for item in chat_session.messages] + [f"user: {user_message}"]
+        role_labels = {
+            ChatRole.USER: "usuario",
+            ChatRole.ASSISTANT: "asistente",
+            ChatRole.SYSTEM: "sistema",
+        }
+        history_lines = [
+            f"{role_labels.get(item.role, item.role.value)}: {item.content}"
+            for item in chat_session.messages
+        ] + [f"usuario: {user_message}"]
         checklist_lines = [f"- [{item.severity.value}] {item.title}: {item.details or ''}".strip() for item in analysis.checklist_items]
         file_lines = [f"- {item.path} ({item.change_type}, +{item.additions}/-{item.deletions})" for item in analysis.files]
 

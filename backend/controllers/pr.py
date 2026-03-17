@@ -37,7 +37,7 @@ class PRController:
         analysis = await self.pr_service.analyze_pull_request(data)
         return SucessWithData(
             success=True,
-            message="PR analyzed successfully.",
+            message="PR analizado correctamente.",
             result=PRService.to_response_payload(analysis),
         )
 
@@ -46,7 +46,7 @@ class PRController:
         analysis = await self.pr_service.get_analysis(analysis_id)
         return SucessWithData(
             success=True,
-            message="PR analysis retrieved successfully.",
+            message="Análisis de PR recuperado correctamente.",
             result=PRService.to_response_payload(analysis),
         )
 
@@ -55,7 +55,7 @@ class PRController:
         analysis = await self.pr_service.get_analysis(analysis_id)
         return SucessWithData(
             success=True,
-            message="Checklist retrieved successfully.",
+            message="Checklist recuperado correctamente.",
             result=PRService.to_response_payload(analysis)["checklist"],
         )
 
@@ -64,7 +64,7 @@ class PRController:
         items = await self.pr_service.list_history()
         return SucessWithData(
             success=True,
-            message="PR history retrieved successfully.",
+            message="Historial de PR recuperado correctamente.",
             result=[
                 {
                     "id": str(item.id),
@@ -84,6 +84,6 @@ class PRController:
         await self.pr_service.delete_analysis(analysis_id)
         return SucessWithData(
             success=True,
-            message="PR analysis deleted successfully.",
+            message="Análisis de PR eliminado correctamente.",
             result={"deleted": True},
         )

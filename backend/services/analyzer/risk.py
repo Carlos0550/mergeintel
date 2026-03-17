@@ -42,6 +42,15 @@ def calculate_risk(
         score += 3
         reasons.extend(schema_analysis.warnings)
 
+    schema_change_count = (
+        len(schema_analysis.migration_files)
+        + len(schema_analysis.orm_model_files)
+        + len(schema_analysis.sql_files)
+    )
+    if schema_change_count:
+        score += 2
+        reasons.append("El PR incluye cambios de schema o migraciones que requieren revisión cuidadosa.")
+
     if out_of_scope_count:
         score += 2
         reasons.append("Se detectaron archivos potencialmente fuera de scope.")

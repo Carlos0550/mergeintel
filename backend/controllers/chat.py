@@ -25,7 +25,7 @@ class ChatController:
         assistant_message = payload["history"][-1]["content"] if payload["history"] else ""
         return SucessWithData(
             success=True,
-            message="Chat response generated successfully.",
+            message="Respuesta de chat generada correctamente.",
             result={
                 "session_id": payload["session_id"],
                 "analysis_id": payload["analysis_id"],
@@ -38,9 +38,9 @@ class ChatController:
     async def get_history(self, analysis_id: UUID) -> SucessWithData | ErrorResponse:
         chat_session = await self.chat_service.get_history(analysis_id)
         payload = self.chat_service.to_response_payload(chat_session)
-        return SucessWithData(success=True, message="Chat history retrieved successfully.", result=payload)
+        return SucessWithData(success=True, message="Historial de chat recuperado correctamente.", result=payload)
 
     @handle_controller_errors(default_message="No se pudo limpiar el historial.", default_code="CHAT_CLEAR_ERROR")
     async def clear_history(self, analysis_id: UUID) -> SucessWithData | ErrorResponse:
         await self.chat_service.clear_history(analysis_id)
-        return SucessWithData(success=True, message="Chat history cleared successfully.", result={"cleared": True})
+        return SucessWithData(success=True, message="Historial de chat limpiado correctamente.", result={"cleared": True})

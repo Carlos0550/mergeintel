@@ -33,7 +33,7 @@ class UserController:
         user = await self.user_service.create_user(data)
         return SucessWithData(
             success=True,
-            message="User created successfully.",
+            message="Usuario creado correctamente.",
             result={
                 "name": user.name,
                 "email": user.email,
@@ -52,7 +52,7 @@ class UserController:
         return (
             SucessWithData(
                 success=True,
-                message="Login successful.",
+                message="Inicio de sesión correcto.",
                 result={
                     "id": str(user.id),
                     "name": user.name,
@@ -71,7 +71,7 @@ class UserController:
     async def get_current_user_data(self, current_user: CurrentUser) -> Union[SucessWithData, ErrorResponse]:
         return SucessWithData(
             success=True,
-            message="Current user resolved successfully.",
+            message="Usuario actual resuelto correctamente.",
             result=current_user.model_dump(mode="json"),
         )
 
@@ -83,7 +83,7 @@ class UserController:
         await self.session_service.revoke_session(session_token)
         return SucessWithData(
             success=True,
-            message="Logout successful.",
+            message="Sesión cerrada correctamente.",
             result={"revoked": True},
         )
 
@@ -104,7 +104,7 @@ class UserController:
         return (
             SucessWithData(
                 success=True,
-                message="Session created successfully.",
+                message="Sesión creada correctamente.",
                 result={"user_id": str(user.id)},
             ),
             session_token,
@@ -118,7 +118,7 @@ class UserController:
         user, oauth_account = await self.user_service.create_user_with_github(data)
         return SucessWithData(
             success=True,
-            message="GitHub account processed successfully.",
+            message="Cuenta de GitHub procesada correctamente.",
             result={
                 "id": str(user.id),
                 "name": user.name,
@@ -141,7 +141,7 @@ class UserController:
         user, oauth_account = await self.user_service.authenticate_with_github(data)
         return SucessWithData(
             success=True,
-            message="GitHub login processed successfully.",
+            message="Inicio de sesión con GitHub procesado correctamente.",
             result={
                 "id": str(user.id),
                 "name": user.name,
@@ -168,7 +168,7 @@ class UserController:
         user, oauth_account = await self.user_service.link_github_account(user_id, data)
         return SucessWithData(
             success=True,
-            message="GitHub account linked successfully.",
+            message="Cuenta de GitHub enlazada correctamente.",
             result={
                 "id": str(user.id),
                 "email": user.email,

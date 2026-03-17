@@ -292,7 +292,7 @@ class UserService:
         )
         try:
             await self.mail_service.send_email(
-                EmailPayload(to=[user.email], subject="Welcome to MergeIntel", html=html_content)
+                EmailPayload(to=[user.email], subject="Bienvenido a MergeIntel", html=html_content)
             )
         except Exception:
             logger.exception("Failed to send welcome email", extra={"user_id": str(user.id), "email": user.email})

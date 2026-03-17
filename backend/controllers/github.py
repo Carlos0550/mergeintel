@@ -36,7 +36,7 @@ class GitHubWebhookController:
         if action not in {"opened", "reopened", "synchronize"}:
             return SucessWithData(
                 success=True,
-                message="Webhook action ignored.",
+                message="Acción de webhook ignorada.",
                 result={"processed": False, "action": action},
             )
 
@@ -51,7 +51,7 @@ class GitHubWebhookController:
         if user_id is None:
             return SucessWithData(
                 success=True,
-                message="Webhook received but no MergeIntel user could be resolved.",
+                message="Webhook recibido, pero no se pudo resolver un usuario de MergeIntel.",
                 result={"processed": False, "reason": "owner_not_resolved"},
             )
 
@@ -77,6 +77,6 @@ class GitHubWebhookController:
 
         return SucessWithData(
             success=True,
-            message="Webhook processed successfully.",
+            message="Webhook procesado correctamente.",
             result={"processed": True, "analysis_id": str(analysis.id), "action": action},
         )
