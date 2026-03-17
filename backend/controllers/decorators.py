@@ -9,6 +9,7 @@ from typing import Any, TypeVar
 
 from sqlalchemy.exc import IntegrityError
 
+from backend.exceptions import AppError
 from backend.schemas.base import ErrorResponse
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,14 @@ def _integrity_error_to_response(exc: IntegrityError) -> ErrorResponse:
                 message="El correo electrónico ya está registrado.",
                 err=msg,
                 err_code="DUPLICATE_EMAIL",
+                status_code=409,
+            )
+        if "uq_oauth_provider_user" in msg.lower():
+            return ErrorResponse(
+                success=False,
+                message="La cuenta de GitHub ya está enlazada a otro usuario.",
+                err=msg,
+                err_code="GITHUB_ACCOUNT_ALREADY_LINKED",
                 status_code=409,
             )
         return ErrorResponse(
@@ -63,6 +72,14 @@ def handle_controller_errors(
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             try:
                 return await fn(*args, **kwargs)
+            except AppError as e:
+                return ErrorResponse(
+                    success=False,
+                    message=e.message,
+                    err=e.message,
+                    err_code=e.err_code,
+                    status_code=e.status_code,
+                )
             except IntegrityError as e:
                 logger.warning("Controller integrity error: %s", e, exc_info=True)
                 return _integrity_error_to_response(e)

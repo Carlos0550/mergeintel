@@ -28,3 +28,25 @@ class CreateUserRequest(BaseModel):
     @field_validator("name", mode="before")
     def validate_name(cls, v: str) -> str:
         return v.strip().lower()
+
+
+class GitHubOAuthRequest(BaseModel):
+    code: str = Field(..., description="GitHub OAuth authorization code")
+    redirect_uri: str | None = Field(
+        default=None,
+        description="Redirect URI used when exchanging the authorization code",
+    )
+
+    @field_validator("code", mode="before")
+    def validate_code(cls, v: str) -> str:
+        value = v.strip()
+        if not value:
+            raise ValueError("GitHub code is required")
+        return value
+
+    @field_validator("redirect_uri", mode="before")
+    def validate_redirect_uri(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        value = v.strip()
+        return value or None
