@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.config import settings
+from backend.exceptions import AppError
 from backend.logging_config import configure_logging
 
 
@@ -19,6 +20,9 @@ configure_logging(settings)
 
 from backend.db.connection import close_engine, create_session_factory
 from backend.routers.authentication import router as authentication_router
+from backend.routers.chat import router as chat_router
+from backend.routers.github import router as github_router
+from backend.routers.pr import router as pr_router
 from backend.services.mail import build_mail_service
 
 
@@ -92,6 +96,25 @@ app.add_middleware(
 )
 
 app.include_router(authentication_router)
+app.include_router(pr_router)
+app.include_router(chat_router)
+app.include_router(github_router)
+
+
+@app.exception_handler(AppError)
+async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
+    """Return structured application errors raised outside controller wrappers."""
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "message": exc.message,
+            "err": exc.message,
+            "err_code": exc.err_code,
+            "status_code": exc.status_code,
+        },
+    )
 
 
 @app.exception_handler(Exception)

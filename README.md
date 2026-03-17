@@ -56,7 +56,7 @@ Ask questions about the PR in natural language. The AI has full context of every
 |---|---|
 | GitHub integration | GitHub REST API v3 via `httpx` |
 | Backend | Python + FastAPI |
-| AI analysis | Anthropic SDK / OpenAI SDK / Ollama |
+| AI analysis | Groq / Anthropic SDK / OpenAI SDK / Ollama |
 | Frontend | React + TypeScript |
 | Database | PostgreSQL via `asyncpg` |
 | CI integration | GitHub Actions |
@@ -178,11 +178,12 @@ uvicorn backend.main:app --reload
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 GITHUB_WEBHOOK_SECRET=
+GITHUB_TOKEN_ENCRYPTION_KEY=
 
-# AI provider (pick one)
-ANTHROPIC_API_KEY=
-OPENAI_API_KEY=
-OLLAMA_BASE_URL=http://localhost:11434
+# AI provider
+AI_PROVIDER=groq
+AI_PROVIDER_API_KEY=
+AI_MODEL=
 
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5432/mergeintel

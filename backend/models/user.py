@@ -63,6 +63,15 @@ class User(BaseModel):
     oauth_accounts: Mapped[list["OAuthAccount"]] = relationship(
         "OAuthAccount", back_populates="user", cascade="all, delete-orphan"
     )
+    sessions: Mapped[list["UserSession"]] = relationship(
+        "UserSession", back_populates="user", cascade="all, delete-orphan"
+    )
+    pr_analyses: Mapped[list["PRAnalysis"]] = relationship(
+        "PRAnalysis", back_populates="user", cascade="all, delete-orphan"
+    )
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(
+        "ChatSession", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class OAuthAccount(BaseModel):
