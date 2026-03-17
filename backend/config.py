@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,11 +23,10 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: str | None = None
     GITHUB_WEBHOOK_SECRET: str | None = None
     GITHUB_API_BASE_URL: str = "https://api.github.com"
-    ANTHROPIC_API_KEY: str | None = None
-    OPENAI_API_KEY: str | None = None
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    AI_PROVIDER: str = "anthropic"
-    AI_MODEL: str | None = "claude-sonnet-4-20250514"
+    GITHUB_TOKEN_ENCRYPTION_KEY: str | None = None
+    AI_PROVIDER_API_KEY: str | None = None
+    AI_PROVIDER: str = "groq"
+    AI_MODEL: str | None = None
     DATABASE_URL: str
     APP_ENV: str = "development"
     APP_PORT: int = 8000
@@ -81,6 +80,51 @@ class Settings(BaseSettings):
         if normalized not in {"json", "text"}:
             raise ValueError(f"Invalid log format: {value}")
         return normalized
+
+    @field_validator("GITHUB_API_BASE_URL", mode="before")
+    @classmethod
+    def normalize_github_api_base_url(cls, value: str | None) -> str:
+        """Fallback to the default GitHub API URL when the env value is blank."""
+
+        normalized = (value or "").strip()
+        return normalized or "https://api.github.com"
+
+    @field_validator("AI_PROVIDER", mode="before")
+    @classmethod
+    def normalize_ai_provider(cls, value: str | None) -> str:
+        """Normalize the configured AI provider."""
+
+        normalized = (value or "").strip().lower()
+        return normalized or "groq"
+
+    @field_validator("AI_MODEL", mode="before")
+    @classmethod
+    def normalize_ai_model(cls, value: str | None) -> str | None:
+        """Treat blank AI model values as unset so provider defaults can apply."""
+
+        normalized = (value or "").strip()
+        return normalized or None
+
+    @field_validator("AI_PROVIDER_API_KEY", "GITHUB_TOKEN_ENCRYPTION_KEY", mode="before")
+    @classmethod
+    def normalize_optional_secret(cls, value: str | None) -> str | None:
+        """Treat blank secret env vars as missing values."""
+
+        normalized = (value or "").strip()
+        return normalized or None
+
+    @model_validator(mode="after")
+    def validate_provider_settings(self) -> Settings:
+        """Validate provider-specific configuration without spreading env rules elsewhere."""
+
+        supported_providers = {"anthropic", "openai", "groq", "ollama"}
+        if self.AI_PROVIDER not in supported_providers:
+            raise ValueError(f"Unsupported AI provider: {self.AI_PROVIDER}")
+
+        if (self.GITHUB_CLIENT_ID or self.GITHUB_CLIENT_SECRET) and not self.GITHUB_TOKEN_ENCRYPTION_KEY:
+            raise ValueError("GITHUB_TOKEN_ENCRYPTION_KEY is required when GitHub OAuth is enabled.")
+
+        return self
 
 
 settings = Settings()

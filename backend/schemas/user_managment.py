@@ -50,3 +50,22 @@ class GitHubOAuthRequest(BaseModel):
             return None
         value = v.strip()
         return value or None
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., description="The user email")
+    password: str = Field(..., description="The user password")
+
+    @field_validator("email", mode="before")
+    def normalize_email(cls, v: str) -> str:
+        value = v.strip().lower()
+        if "@" not in value:
+            raise ValueError("Invalid email")
+        return value
+
+    @field_validator("password", mode="before")
+    def normalize_password(cls, v: str) -> str:
+        value = v.strip()
+        if not value:
+            raise ValueError("Password is required")
+        return value
