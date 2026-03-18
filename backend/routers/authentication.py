@@ -6,9 +6,10 @@ from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.config import settings
 from backend.controllers.authentication import UserController
 from backend.dependencies import get_current_user, get_db_session, get_mail_service, get_optional_current_user
 from backend.schemas.base import ErrorResponse, SucessWithData
@@ -18,6 +19,16 @@ from backend.services.mail import MailService
 
 router = APIRouter(prefix="/auth", tags=["authentication & User management"])
 SESSION_COOKIE_NAME = "mergeintel_session"
+
+
+def _frontend_redirect_url(path: str, **query_params: str | None) -> str:
+    """Build a frontend redirect URL using the configured base URL."""
+
+    base = settings.FRONTEND_BASE_URL.rstrip("/")
+    query = urlencode({key: value for key, value in query_params.items() if value is not None})
+    if query:
+        return f"{base}{path}?{query}"
+    return f"{base}{path}"
 
 
 def _parse_github_state(state: str | None) -> tuple[str, UUID | None]:
@@ -254,36 +265,33 @@ async def github_callback(
     mail_service: MailService = Depends(get_mail_service),
 ):
     if error:
-        result = ErrorResponse(
-            success=False,
-            message="GitHub devolvio un error en el callback.",
-            err=error_description or error,
-            err_code="GITHUB_CALLBACK_ERROR",
-            status_code=400,
+        return RedirectResponse(
+            url=_frontend_redirect_url(
+                "/login",
+                error=error_description or error,
+            ),
+            status_code=303,
         )
-        return JSONResponse(content=result.model_dump(), status_code=result.status_code)
 
     if not code:
-        result = ErrorResponse(
-            success=False,
-            message="GitHub no devolvio un code en el callback.",
-            err="Missing code query parameter",
-            err_code="GITHUB_CODE_MISSING",
-            status_code=400,
+        return RedirectResponse(
+            url=_frontend_redirect_url(
+                "/login",
+                error="Missing code query parameter",
+            ),
+            status_code=303,
         )
-        return JSONResponse(content=result.model_dump(), status_code=result.status_code)
 
     try:
         action, user_id = _parse_github_state(state)
     except ValueError as exc:
-        result = ErrorResponse(
-            success=False,
-            message="El parametro state del callback es invalido.",
-            err=str(exc),
-            err_code="GITHUB_STATE_INVALID",
-            status_code=400,
+        return RedirectResponse(
+            url=_frontend_redirect_url(
+                "/login",
+                error=str(exc),
+            ),
+            status_code=303,
         )
-        return JSONResponse(content=result.model_dump(), status_code=result.status_code)
 
     controller = UserController(db=db, mail_service=mail_service)
     payload = GitHubOAuthRequest(
@@ -299,16 +307,30 @@ async def github_callback(
         result = await controller.create_user_with_github(payload)
 
     if isinstance(result, ErrorResponse):
-        return JSONResponse(
-            content=result.model_dump(),
-            status_code=result.status_code,
+        redirect_path = "/profile" if action == "link" else "/login"
+        return RedirectResponse(
+            url=_frontend_redirect_url(
+                redirect_path,
+                error=result.message,
+            ),
+            status_code=303,
         )
 
     session_result = await controller.create_session_for_user(UUID(str(result.result["id"])))
     if isinstance(session_result, ErrorResponse):
-        return JSONResponse(content=session_result.model_dump(), status_code=session_result.status_code)
+        return RedirectResponse(
+            url=_frontend_redirect_url(
+                "/login",
+                error=session_result.message,
+            ),
+            status_code=303,
+        )
 
     _, session_token = session_result
-    response = JSONResponse(content=result.model_dump(), status_code=200)
+    success_redirect = "/profile" if action == "link" else "/dashboard"
+    response = RedirectResponse(
+        url=_frontend_redirect_url(success_redirect),
+        status_code=303,
+    )
     _set_session_cookie(response, session_token)
     return response

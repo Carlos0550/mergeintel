@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     APP_PORT: int = 8000
     APP_TIMEZONE: str = "America/Argentina/Buenos_Aires"
+    FRONTEND_BASE_URL: str = "http://localhost:3000"
     MAIL_FROM: str = "no-reply@example.com"
     MAIL_FROM_NAME: str = "MergeIntel"
     MAIL_SERVER: str = "mailpit"
@@ -104,6 +105,14 @@ class Settings(BaseSettings):
 
         normalized = (value or "").strip()
         return normalized or None
+
+    @field_validator("FRONTEND_BASE_URL", mode="before")
+    @classmethod
+    def normalize_frontend_base_url(cls, value: str | None) -> str:
+        """Fallback to the local frontend URL when unset and remove trailing slash."""
+
+        normalized = (value or "").strip().rstrip("/")
+        return normalized or "http://localhost:3000"
 
     @field_validator("AI_PROVIDER_API_KEY", "GITHUB_TOKEN_ENCRYPTION_KEY", mode="before")
     @classmethod

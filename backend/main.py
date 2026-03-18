@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from urllib.parse import urlsplit
 
 from backend.config import settings
 from backend.exceptions import AppError
@@ -27,6 +28,20 @@ from backend.services.mail import build_mail_service
 
 
 logger = logging.getLogger(__name__)
+
+
+def _build_allowed_origins() -> list[str]:
+    origins = {
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://pr-intel-app.preview.emergentagent.com",
+    }
+    frontend_origin = urlsplit(settings.FRONTEND_BASE_URL)
+    if frontend_origin.scheme and frontend_origin.netloc:
+        origins.add(f"{frontend_origin.scheme}://{frontend_origin.netloc}")
+    return sorted(origins)
 
 
 @asynccontextmanager
@@ -89,7 +104,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=_build_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

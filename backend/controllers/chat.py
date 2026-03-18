@@ -10,13 +10,23 @@ from backend.controllers.decorators import handle_controller_errors
 from backend.schemas.base import ErrorResponse, SucessWithData
 from backend.services.ai import AIProviderClient
 from backend.services.chat import ChatService
+from backend.services.github.client import GitHubClient
 
 
 class ChatController:
     """Controller for persisted PR chat flows."""
 
-    def __init__(self, *, db: AsyncSession, ai_client: AIProviderClient, current_user_id: UUID) -> None:
-        self.chat_service = ChatService(session=db, ai_client=ai_client, current_user_id=current_user_id)
+    def __init__(
+        self,
+        *,
+        db: AsyncSession,
+        ai_client: AIProviderClient,
+        current_user_id: UUID,
+        github_client: GitHubClient | None = None,
+    ) -> None:
+        self.chat_service = ChatService(
+            session=db, ai_client=ai_client, current_user_id=current_user_id, github_client=github_client,
+        )
 
     @handle_controller_errors(default_message="No se pudo responder el chat.", default_code="CHAT_SEND_ERROR")
     async def send_message(self, analysis_id: UUID, message: str) -> SucessWithData | ErrorResponse:

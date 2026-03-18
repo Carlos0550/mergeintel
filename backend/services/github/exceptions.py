@@ -19,3 +19,7 @@ class RepoNotFoundError(GitHubAPIError):
 
 class PRNotFoundError(GitHubAPIError):
     """Raised when a pull request cannot be accessed."""
+
+
+class BranchNotFoundError(GitHubAPIError):
+    """Raised when a branch or ref does not exist in the repository."""

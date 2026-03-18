@@ -8,6 +8,7 @@ import httpx
 
 from backend.config import settings
 from backend.services.github.exceptions import (
+    BranchNotFoundError,
     GitHubAPIError,
     GitHubRateLimitError,
     PRNotFoundError,
@@ -81,6 +82,10 @@ class GitHubClient:
         payload = await self.get(f"/repos/{owner}/{repo}/pulls/{pr_number}/commits")
         return payload if isinstance(payload, list) else []
 
+    async def list_pr_review_comments(self, owner: str, repo: str, pr_number: int) -> list[dict[str, Any]]:
+        payload = await self.get(f"/repos/{owner}/{repo}/pulls/{pr_number}/comments")
+        return payload if isinstance(payload, list) else []
+
     async def get_commit(self, owner: str, repo: str, sha: str) -> dict[str, Any]:
         return await self.get(f"/repos/{owner}/{repo}/commits/{sha}")
 
@@ -100,6 +105,8 @@ class GitHubClient:
         if response.status_code == 404:
             if "/pulls/" in operation:
                 raise PRNotFoundError(message, err_code="PULL_REQUEST_NOT_FOUND", status_code=404)
+            if "/compare/" in operation:
+                raise BranchNotFoundError(message, err_code="GITHUB_BRANCH_NOT_FOUND", status_code=404)
             raise RepoNotFoundError(message, err_code="GITHUB_REPOSITORY_NOT_FOUND", status_code=404)
         if response.status_code == 401:
             raise GitHubAPIError(

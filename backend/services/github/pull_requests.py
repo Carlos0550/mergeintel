@@ -6,6 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from backend.services.github.client import GitHubClient
+from backend.services.github.exceptions import BranchNotFoundError
 from backend.services.github.parsers import build_repo_full_name, truncate_patch
 from backend.services.github.types import PRAnalysisInput, PRAuthor, PRCommit, PRFileChange, PRMetadata
 
@@ -90,7 +91,12 @@ class PullRequestService:
             if file_change.author_key and file_change.author_key in authors:
                 authors[file_change.author_key].files.add(path)
 
-        divergence_days = await self._compute_divergence_days(owner, repo, metadata.base_branch, metadata.head_branch)
+        head_branch_missing = False
+        try:
+            divergence_days = await self._compute_divergence_days(owner, repo, metadata.base_branch, metadata.head_branch)
+        except BranchNotFoundError:
+            divergence_days = 0
+            head_branch_missing = True
 
         return PRAnalysisInput(
             metadata=metadata,
@@ -98,6 +104,7 @@ class PullRequestService:
             commits=commits,
             files=files,
             divergence_days=divergence_days,
+            head_branch_missing=head_branch_missing,
         )
 
     async def _build_commit(self, owner: str, repo: str, payload: dict) -> PRCommit:
