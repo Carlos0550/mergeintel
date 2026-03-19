@@ -225,7 +225,7 @@ async def start_github_oauth(
         {
             "client_id": settings.GITHUB_CLIENT_ID,
             "redirect_uri": redirect_uri,
-            "scope": "read:user user:email repo",
+            "scope": "user:email",
             "state": state,
         }
     )

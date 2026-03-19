@@ -327,7 +327,11 @@ class OpenAICompatibleAIProvider(AIProviderClient):
                     args = parsed if isinstance(parsed, dict) else {}
                 except json.JSONDecodeError:
                     args = {}
-                calls.append(ToolCall(id=acc["id"], name=acc["name"], arguments=args))
+                calls.append(ToolCall(
+                    id=acc["id"] or f"tool_call_{idx}",
+                    name=acc["name"],
+                    arguments=args,
+                ))
             yield ToolCallEvent(tool_calls=calls)
 
         yield DoneEvent()
@@ -340,7 +344,9 @@ class OpenAICompatibleAIProvider(AIProviderClient):
             if m.role == "tool" and m.tool_call_id:
                 result.append({"role": "tool", "tool_call_id": m.tool_call_id, "content": m.content})
             elif m.role == "assistant" and m.tool_calls:
-                msg: dict = {"role": "assistant", "content": m.content or None}
+                # OpenAI-compatible providers are more reliable when tool-call assistant
+                # messages are sent back without free-form content.
+                msg: dict = {"role": "assistant", "content": None}
                 msg["tool_calls"] = [
                     {
                         "id": tc.id,

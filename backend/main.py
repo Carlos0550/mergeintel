@@ -34,9 +34,7 @@ def _build_allowed_origins() -> list[str]:
     origins = {
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://pr-intel-app.preview.emergentagent.com",
+
     }
     frontend_origin = urlsplit(settings.FRONTEND_BASE_URL)
     if frontend_origin.scheme and frontend_origin.netloc:

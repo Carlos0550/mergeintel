@@ -159,23 +159,33 @@ class UserService:
         return user, await self._create_github_link(user, identity)
 
     async def authenticate_with_github(self, data: GitHubOAuthRequest) -> tuple[User, OAuthAccount]:
-        """Authenticate an existing MergeIntel user through a previously linked GitHub account."""
+        """Authenticate via GitHub, auto-creating or linking the account if it doesn't exist yet."""
 
         identity = await self._resolve_github_identity(data)
         existing_oauth = await self._get_github_oauth_account(identity.provider_user_id)
         if existing_oauth is None:
             existing_user = await self.get_user_by_email(identity.email)
             if existing_user is not None:
-                raise AppError(
-                    "Tu usuario existe pero no tiene GitHub enlazado. Usa el flujo de enlace primero.",
-                    err_code="GITHUB_ACCOUNT_NOT_LINKED",
-                    status_code=409,
-                )
-            raise AppError(
-                "No existe una cuenta registrada con ese GitHub. Usa el flujo de registro primero.",
-                err_code="GITHUB_ACCOUNT_NOT_REGISTERED",
-                status_code=404,
+                return await self._create_github_link(existing_user, identity)
+            user = User(
+                name=self._normalize_name(identity.name),
+                email=identity.email,
+                password=None,
+                role=UserRole.USER,
+                status=UserStatus.ACTIVE,
             )
+            self.session.add(user)
+            try:
+                oauth_account = await self._create_github_link(user, identity, send_welcome_email=False)
+                await self._send_welcome_email(user)
+            except SQLAlchemyError:
+                await self.session.rollback()
+                logger.exception(
+                    "Failed to auto-create GitHub user during login",
+                    extra={"operation": "authenticate_with_github", "email": identity.email},
+                )
+                raise
+            return user, oauth_account
 
         user = await self.get_user_by_id(existing_oauth.user_id)
         if user is None:

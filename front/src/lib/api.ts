@@ -38,12 +38,18 @@ export const api = axios.create({
 });
 
 // Response interceptor: handle 401
+const PUBLIC_PATHS = ['/login', '/register', '/auth/callback'];
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<ApiEnvelope<unknown>>) => {
     if (error.response?.status === 401) {
+      const isPublicPath = PUBLIC_PATHS.some((p) =>
+        window.location.pathname.startsWith(p)
+      );
       useAuthStore.getState().clearAuth();
-      window.location.href = '/login';
+      if (!isPublicPath) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
