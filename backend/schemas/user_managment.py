@@ -1,12 +1,27 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field, field_validator
 from backend.models.user import UserRole, UserStatus
+
+
+class OAuthAccountSummary(BaseModel):
+    provider: str = Field(..., description="OAuth provider name")
+    provider_login: str | None = Field(default=None, description="OAuth provider username/login")
+
 
 class CurrentUser(BaseModel):
     id: str = Field(..., description="The id of the user")
     name: str = Field(..., description="The name of the user")
     email: str = Field(..., description="The email of the user")
     role: UserRole = Field(..., description="The role of the user")
-    status: UserStatus = Field(..., description="The status of the user")   
+    status: UserStatus = Field(..., description="The status of the user")
+    created_at: datetime | None = Field(default=None, description="The account creation timestamp")
+    oauth_accounts: list[OAuthAccountSummary] = Field(
+        default_factory=list,
+        description="Linked OAuth accounts for the user",
+    )
+    github_account: OAuthAccountSummary | None = Field(default=None, description="Linked GitHub account if present")
+    github_login: str | None = Field(default=None, description="Linked GitHub username/login")
 
 class CreateUserRequest(BaseModel):
     name: str = Field(..., description="The name of the user")
