@@ -75,3 +75,4 @@ class PRAnalysisInput:
     commits: list[PRCommit]
     files: list[PRFileChange]
     divergence_days: int
+    head_branch_missing: bool = False

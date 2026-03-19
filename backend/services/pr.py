@@ -78,6 +78,15 @@ class PRService:
 
         risk_analysis = calculate_risk(analysis_input, schema_analysis, out_of_scope_count)
         checklist = self._build_checklist(schema_analysis, risk_analysis)
+        if analysis_input.head_branch_missing:
+            checklist.insert(
+                0,
+                {
+                    "title": "La rama head ya no existe en el repositorio",
+                    "details": f"La rama '{analysis_input.metadata.head_branch}' fue eliminada. El PR no puede mergearse hasta que se restaure o se cambie la rama base.",
+                    "severity": ChecklistSeverity.CRITICAL.value,
+                },
+            )
         summary_service = SummaryService(self.ai_client)
         summary_result = await summary_service.generate_summary(
             analysis_input=analysis_input,
@@ -178,6 +187,7 @@ class PRService:
         analysis.summary_payload = summary_result.payload
         analysis.risk_score = risk_analysis.score
         analysis.divergence_days = analysis_input.divergence_days
+        analysis.head_branch_missing = analysis_input.head_branch_missing
         analysis.status = AnalysisStatus.DONE
         await self.session.commit()
 
@@ -265,12 +275,33 @@ class PRService:
     @staticmethod
     def _build_checklist(schema_analysis, risk_analysis) -> list[dict[str, str]]:
         checklist: list[dict[str, str]] = []
+        if schema_analysis.migration_files or schema_analysis.orm_model_files or schema_analysis.sql_files:
+            schema_details: list[str] = []
+            if schema_analysis.migration_files:
+                schema_details.append(
+                    f"Migraciones detectadas: {', '.join(schema_analysis.migration_files[:5])}"
+                )
+            if schema_analysis.orm_model_files:
+                schema_details.append(
+                    f"Modelos ORM tocados: {', '.join(schema_analysis.orm_model_files[:5])}"
+                )
+            if schema_analysis.sql_files:
+                schema_details.append(
+                    f"Archivos SQL tocados: {', '.join(schema_analysis.sql_files[:5])}"
+                )
+            checklist.append(
+                {
+                    "title": "Validar cambios de schema antes del merge",
+                    "details": " | ".join(schema_details),
+                    "severity": ChecklistSeverity.HIGH.value,
+                }
+            )
         for warning in schema_analysis.warnings:
             checklist.append(
                 {
                     "title": "Revisar migraciones y schema",
                     "details": warning,
-                    "severity": ChecklistSeverity.HIGH.value,
+                    "severity": ChecklistSeverity.CRITICAL.value,
                 }
             )
         for reason in risk_analysis.reasons:
@@ -284,7 +315,7 @@ class PRService:
         if not checklist:
             checklist.append(
                 {
-                    "title": "Validacion general",
+                    "title": "Validación general",
                     "details": "No se detectaron alertas estaticas fuertes, revisar cobertura y comportamiento funcional.",
                     "severity": ChecklistSeverity.LOW.value,
                 }
@@ -306,6 +337,7 @@ class PRService:
             "summary_payload": analysis.summary_payload,
             "risk_score": analysis.risk_score,
             "divergence_days": analysis.divergence_days,
+            "head_branch_missing": analysis.head_branch_missing,
             "error_message": analysis.error_message,
             "authors": [
                 {

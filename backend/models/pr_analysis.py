@@ -48,6 +48,7 @@ class PRAnalysis(BaseModel):
     summary_payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     risk_score: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
     divergence_days: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    head_branch_missing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user = relationship("User", back_populates="pr_analyses")

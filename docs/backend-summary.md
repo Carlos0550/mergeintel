@@ -2,103 +2,142 @@
 
 ## 1. Arquitectura General
 
-El backend de MergeIntel está construido con **FastAPI** siguiendo una arquitectura en capas:
+El backend de MergeIntel está construido con **FastAPI** y sigue una arquitectura en capas:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FastAPI Application                       │
-│                         (main.py)                                │
-└─────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         Routers (API)                            │
-│              /auth/* - Autenticación y gestión de usuarios        │
-└─────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Controllers                                  │
-│         Orquestan la lógica, manejan errores, formatean respuestas│
-└─────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       Services                                    │
-│    Lógica de negocio: UserService, MailService (providers)         │
-└─────────────────────────────────────────────────────────────────┘
-                                  │
-                                  ▼
-┌──────────────────────┬──────────────────────┬────────────────────┐
-│   Models (ORM)       │   Database (async)    │   Utils/Helpers     │
-│   SQLAlchemy         │   PostgreSQL/asyncpg  │   security, text    │
-└──────────────────────┴──────────────────────┴────────────────────┘
+```text
+┌────────────────────────────────────────────────────────────────────┐
+│                         FastAPI Application                       │
+│                              main.py                              │
+└────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                             Routers                               │
+│ /auth/*  /pr/*  /chat/*  /github/webhook                          │
+└────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                           Controllers                             │
+│ Orquestan flujos, manejan errores y devuelven respuestas API      │
+└────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌────────────────────────────────────────────────────────────────────┐
+│                            Services                               │
+│ Auth, Session, GitHub, Analyzer, PR, Chat, Mail                   │
+└────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌──────────────────────┬──────────────────────┬─────────────────────┐
+│    Models (ORM)      │    Database (async)  │    Utils/Helpers    │
+│    SQLAlchemy        │ PostgreSQL/asyncpg   │ security, text, tz  │
+└──────────────────────┴──────────────────────┴─────────────────────┘
 ```
 
-**Stack tecnológico:**
+### Stack tecnológico
+
 - **Framework:** FastAPI
-- **ORM:** SQLAlchemy (async)
-- **Base de datos:** PostgreSQL (asyncpg)
+- **ORM:** SQLAlchemy async
+- **Base de datos:** PostgreSQL + asyncpg
 - **Migraciones:** Alembic
 - **Validación:** Pydantic
-- **Email:** fastapi-mail (dev) / Resend (producción)
+- **Integración GitHub:** GitHub REST API v3 con `httpx`
+- **IA:** provider unificado con soporte para `groq`, `anthropic`, `openai` y `ollama`
+- **Email:** fastapi-mail en desarrollo / Resend en producción
 
 ---
 
 ## 2. Estructura de Carpetas
 
-```
+```text
 backend/
-├── main.py                 # Punto de entrada FastAPI
-├── config.py               # Configuración (Settings desde .env)
-├── dependencies.py         # Inyección de dependencias FastAPI
-├── exceptions.py           # Excepciones de aplicación (AppError)
-├── logging_config.py       # Configuración centralizada de logs
-├── timezone.py             # Helpers de zona horaria
+├── main.py
+├── config.py
+├── dependencies.py
+├── exceptions.py
+├── logging_config.py
+├── timezone.py
 │
-├── routers/                # Definición de endpoints
-│   ├── __init__.py
-│   └── authentication.py   # Rutas de autenticación
+├── routers/
+│   ├── authentication.py
+│   ├── pr.py
+│   ├── chat.py
+│   └── github.py
 │
-├── controllers/            # Capa de orquestación
-│   ├── decorators.py       # @handle_controller_errors
-│   └── authentication.py   # UserController
+├── controllers/
+│   ├── decorators.py
+│   ├── authentication.py
+│   ├── pr.py
+│   ├── chat.py
+│   └── github.py
 │
-├── services/               # Lógica de negocio
-│   ├── authentication.py   # UserService (crear usuario, GitHub OAuth)
-│   └── mail/               # Servicio de correo
+├── services/
+│   ├── authentication.py
+│   ├── session.py
+│   ├── pr.py
+│   ├── chat.py
+│   ├── github_webhook.py
+│   ├── ai/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── factory.py
+│   │   └── providers.py
+│   ├── analyzer/
+│   │   ├── __init__.py
+│   │   ├── chat.py
+│   │   ├── helpers.py
+│   │   ├── prompts.py
+│   │   ├── risk.py
+│   │   ├── schema.py
+│   │   ├── scope.py
+│   │   └── summary.py
+│   ├── github/
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── client.py
+│   │   ├── exceptions.py
+│   │   ├── parsers.py
+│   │   ├── pull_requests.py
+│   │   └── types.py
+│   └── mail/
 │       ├── __init__.py
-│       ├── base.py         # MailService (abstracto), MailDeliveryError
-│       ├── factory.py     # build_mail_service, validate_mail_settings
-│       ├── providers.py   # FastAPIMailService, ResendMailService
-│       ├── schemas.py     # EmailPayload
-│       └── templates.py   # render_html_template (Jinja2)
+│       ├── base.py
+│       ├── factory.py
+│       ├── providers.py
+│       ├── schemas.py
+│       └── templates.py
 │
-├── models/                 # Modelos ORM SQLAlchemy
+├── models/
 │   ├── __init__.py
-│   ├── base.py            # Base, BaseModel (id, timestamps, is_active)
-│   └── user.py            # User, OAuthAccount, enums (UserRole, UserStatus, OauthProviders)
+│   ├── base.py
+│   ├── user.py
+│   ├── session.py
+│   ├── pr_analysis.py
+│   └── chat.py
 │
-├── schemas/                # Esquemas Pydantic (request/response)
-│   ├── base.py            # BaseResponse, SucessWithData, ErrorResponse
-│   └── user_managment.py  # CreateUserRequest, GitHubOAuthRequest, CurrentUser
+├── schemas/
+│   ├── base.py
+│   ├── user_managment.py
+│   ├── pr.py
+│   └── chat.py
 │
-├── db/                     # Acceso a datos
+├── db/
 │   ├── __init__.py
-│   ├── connection.py      # create_session_factory, close_engine, get_session_factory
-│   └── queries.py        # fetch_one, fetch_all, execute (raw SQL helpers)
+│   ├── connection.py
+│   └── queries.py
 │
-├── utils/                  # Utilidades
-│   ├── security.py        # hash_string, verify_string (bcrypt)
-│   └── text.py            # capitalize_words
+├── utils/
+│   ├── security.py
+│   └── text.py
 │
-└── templates/              # Plantillas HTML (emails)
+└── templates/
     └── welcome.html
 ```
 
 ---
 
-## 3. Endpoints (API)
+## 3. Endpoints
 
 ### Health
 
@@ -106,31 +145,46 @@ backend/
 |--------|------|-------------|
 | `GET` | `/health` | Estado del servicio |
 
-**Respuesta:** `{ "status": "ok", "environment": "<APP_ENV>" }`
-
----
-
-### Autenticación (`/auth`)
+### Autenticación y sesión
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `POST` | `/auth/user/new` | Crear usuario (email + contraseña) |
-| `GET` | `/auth/github/start` | Iniciar OAuth con GitHub |
-| `GET` | `/auth/github/callback` | Callback de GitHub OAuth |
+| `POST` | `/auth/user/new` | Crear usuario local |
+| `POST` | `/auth/login` | Iniciar sesión con email y contraseña |
+| `GET` | `/auth/me` | Obtener usuario autenticado desde cookie de sesión |
+| `POST` | `/auth/logout` | Cerrar sesión actual |
+| `GET` | `/auth/github/start` | Generar URL de inicio OAuth con GitHub |
+| `GET` | `/auth/github/callback` | Callback OAuth de GitHub |
 
-#### Detalle de endpoints
+#### `GET /auth/github/start`
 
-**`POST /auth/user/new`**
-- **Body:** `CreateUserRequest` → `{ name, email, password }`
-- **Respuestas:** 200 (éxito), 400 (validación), 409 (email duplicado)
+- `mode=create`: registro con GitHub
+- `mode=login`: login con una cuenta GitHub ya enlazada
+- `mode=link`: enlazar GitHub a un usuario autenticado
 
-**`GET /auth/github/start`**
-- **Query params:** `mode` (create | link), `user_id` (UUID, solo si mode=link)
-- **Respuesta:** `{ authorization_url, redirect_uri, state, mode }`
+### Análisis de PR
 
-**`GET /auth/github/callback`**
-- **Query params:** `code`, `state`, `error`, `error_description`
-- **Respuestas:** 200 (éxito), 400 (error GitHub), 404 (usuario no encontrado), 409 (conflictos OAuth), 502 (error GitHub API)
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/pr/analyze` | Ejecutar análisis completo de un PR |
+| `GET` | `/pr/history` | Listar análisis del usuario autenticado |
+| `GET` | `/pr/{analysis_id}` | Obtener análisis completo |
+| `GET` | `/pr/{analysis_id}/checklist` | Obtener checklist del análisis |
+| `DELETE` | `/pr/{analysis_id}` | Eliminar análisis |
+
+### Chat contextual
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/chat/{analysis_id}/message` | Enviar mensaje sobre un PR analizado |
+| `GET` | `/chat/{analysis_id}/history` | Recuperar historial del chat |
+| `DELETE` | `/chat/{analysis_id}` | Limpiar historial del chat |
+
+### GitHub Webhook
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/github/webhook` | Procesar eventos `pull_request` de GitHub |
 
 ---
 
@@ -138,104 +192,313 @@ backend/
 
 ### UserService (`services/authentication.py`)
 
-| Método | Descripción |
-|--------|-------------|
-| `create_user(data)` | Crea usuario con email/contraseña, envía email de bienvenida |
-| `get_user_by_email(email)` | Busca usuario por email |
-| `get_user_by_id(user_id)` | Busca usuario por ID |
-| `create_user_with_github(data)` | Crea usuario desde GitHub OAuth o enlaza si ya existe por email |
-| `link_github_account(user_id, data)` | Enlaza cuenta GitHub a usuario existente |
+Responsabilidades principales:
 
-**Métodos internos (GitHub):**
-- `_resolve_github_identity` – Intercambia code por token y obtiene perfil
-- `_exchange_github_code_for_token` – Intercambio OAuth
-- `_fetch_github_user` – Obtiene perfil de GitHub API
-- `_fetch_primary_github_email` – Obtiene email primario de GitHub
-- `_create_github_link` – Crea registro OAuthAccount
-- `_send_welcome_email` – Envía email de bienvenida
+- crear usuarios locales
+- autenticar usuarios con email/contraseña
+- crear usuarios con GitHub
+- iniciar sesión con GitHub sobre cuentas ya enlazadas
+- enlazar cuentas GitHub existentes
+- intercambiar OAuth code por token
+- resolver identidad GitHub y refrescar token cifrado
 
----
+Métodos relevantes:
+
+- `create_user(data)`
+- `authenticate_user(data)`
+- `get_user_by_email(email)`
+- `get_user_by_id(user_id)`
+- `create_user_with_github(data)`
+- `authenticate_with_github(data)`
+- `link_github_account(user_id, data)`
+
+### SessionService (`services/session.py`)
+
+Responsabilidades:
+
+- crear sesiones persistidas en DB
+- revocar una sesión actual
+- revocar todas las sesiones de un usuario
+
+Métodos:
+
+- `create_session(user)`
+- `revoke_session(session_token)`
+- `revoke_user_sessions(user_id)`
+
+### GitHub Services (`services/github/`)
+
+#### GitHubClient
+
+Cliente HTTP reutilizable para:
+
+- OAuth token exchange
+- `/user`
+- `/user/emails`
+- `/repos/{owner}/{repo}/pulls/{number}`
+- `/pulls/{number}/commits`
+- `/commits/{sha}`
+- `/compare/{base}...{head}`
+
+Maneja:
+
+- token inválido
+- permisos insuficientes
+- rate limit
+- repositorio inexistente
+- PR inexistente
+
+#### PullRequestService
+
+Construye un `PRAnalysisInput` unificado con:
+
+- metadata del PR
+- commits
+- autores
+- archivos modificados
+- patches truncados
+- divergencia de rama
+
+#### Helpers adicionales
+
+- `parse_pull_request_reference(...)`
+- `truncate_patch(...)`
+- `get_github_access_token_for_user(...)`
+
+### Analyzer Services (`services/analyzer/`)
+
+#### `schema.py`
+
+Detecta:
+
+- migraciones Alembic
+- cambios en modelos ORM
+- cambios `.sql`
+- advertencias de modelos sin migración
+
+#### `scope.py`
+
+Evalúa:
+
+- scope explícito por autor si el request trae `author_scopes`
+- scope inferido básico si no hay definición previa
+
+#### `risk.py`
+
+Calcula riesgo usando:
+
+- divergencia
+- cantidad de archivos
+- cambios de schema
+- advertencias de migración
+- archivos fuera de scope
+
+#### `summary.py`
+
+Genera el resumen del PR usando la capa unificada de IA.
+
+#### `chat.py`
+
+Genera respuestas contextuales sobre un análisis persistido.
+
+### PRService (`services/pr.py`)
+
+Pipeline completo:
+
+1. parsea referencia del PR
+2. obtiene datos desde GitHub
+3. corre análisis estático
+4. genera checklist
+5. llama al resumen con IA
+6. persiste autores, commits, archivos, checklist y resumen
+
+Además:
+
+- lista historial
+- recupera análisis por ID
+- elimina análisis
+
+### ChatService (`services/chat.py`)
+
+- crea o reutiliza `ChatSession`
+- persiste `ChatMessage`
+- reconstruye contexto desde `PRAnalysis`
+- responde vía provider IA
+- devuelve historial serializado
+
+### GitHubWebhook helpers (`services/github_webhook.py`)
+
+- valida firma `X-Hub-Signature-256`
+- resuelve usuario dueño del análisis
+- reutiliza el pipeline de `PRService`
 
 ### MailService (`services/mail/`)
 
-**Interfaz abstracta:** `MailService.send_email(payload: EmailPayload)`
+Se mantiene igual:
 
-**Implementaciones:**
-- **FastAPIMailService** – Desarrollo (fastapi-mail, Mailpit en localhost:8025)
-- **ResendMailService** – Producción (Resend API)
-
-**Factory:** `build_mail_service(settings)` → selecciona provider según `APP_ENV`
-
-**EmailPayload:**
-- `to`: list[str]
-- `subject`: str
-- `html`: str | None
-- `text`: str | None
-
-**Helpers:**
-- `render_html_template(template_path, **context)` – Jinja2
-- `validate_mail_settings(settings)` – Valida configuración
+- `FastAPIMailService` para desarrollo
+- `ResendMailService` para producción
 
 ---
 
 ## 5. Controladores
 
-### UserController (`controllers/authentication.py`)
+### UserController
 
-Recibe `AsyncSession` y `MailService` por inyección.
+Expone:
 
-| Método | Descripción |
-|--------|-------------|
-| `create_user(data)` | Crea usuario y devuelve `SucessWithData` o `ErrorResponse` |
-| `create_user_with_github(data)` | Crea usuario con GitHub |
-| `link_github_account(user_id, data)` | Enlaza GitHub a usuario existente |
+- `create_user`
+- `login`
+- `get_current_user_data`
+- `logout`
+- `create_session_for_user`
+- `create_user_with_github`
+- `login_with_github`
+- `link_github_account`
 
-**Decorador:** `@handle_controller_errors` – Captura `AppError`, `IntegrityError` y excepciones genéricas, devuelve `ErrorResponse`.
+### PRController
+
+Expone:
+
+- `analyze`
+- `get_analysis`
+- `get_checklist`
+- `list_history`
+- `delete_analysis`
+
+### ChatController
+
+Expone:
+
+- `send_message`
+- `get_history`
+- `clear_history`
+
+### GitHubWebhookController
+
+Expone:
+
+- `handle_pull_request_event`
+
+Todos los controladores usan `@handle_controller_errors`.
 
 ---
 
-## 6. Modelos (ORM)
+## 6. Modelos ORM
 
 ### BaseModel (`models/base.py`)
 
 Campos comunes:
-- `id`: UUID (gen_random_uuid)
-- `is_active`: bool
-- `created_at`: datetime (timezone)
-- `updated_at`: datetime (timezone)
 
----
+- `id`
+- `is_active`
+- `created_at`
+- `updated_at`
 
-### User (`models/user.py`)
+### User y OAuthAccount (`models/user.py`)
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `name` | str | Nombre del usuario |
-| `email` | str | Email único |
-| `password` | str \| None | Hash bcrypt (null si solo OAuth) |
-| `role` | UserRole | admin \| user |
-| `status` | UserStatus | active \| inactive \| pending \| banned |
-| `oauth_accounts` | relationship | Cuentas OAuth enlazadas |
+`User`:
 
-**Enums:**
-- `UserRole`: ADMIN, USER
-- `UserStatus`: ACTIVE, INACTIVE, PENDING, BANNED
+- `name`
+- `email`
+- `password`
+- `role`
+- `status`
+- relaciones a `oauth_accounts`, `sessions`, `pr_analyses`, `chat_sessions`
 
----
+`OAuthAccount`:
 
-### OAuthAccount (`models/user.py`)
+- `user_id`
+- `provider`
+- `provider_user_id`
+- `provider_login`
+- `access_token`
 
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `user_id` | UUID | FK a user.id (CASCADE) |
-| `provider` | OauthProviders | github \| no_provider \| google |
-| `provider_user_id` | str | ID en el proveedor |
-| `provider_login` | str \| None | Login (ej: "carlos-dev") |
-| `access_token` | str \| None | Token de acceso |
+Nota:
 
-**Constraints:**
-- `uq_oauth_user_provider`: (user_id, provider) único
-- `uq_oauth_provider_user`: (provider, provider_user_id) único
+- `access_token` se guarda cifrado en reposo
+
+### UserSession (`models/session.py`)
+
+- `user_id`
+- `token_hash`
+- `expires_at`
+- `last_seen_at`
+
+### PRAnalysis (`models/pr_analysis.py`)
+
+- `user_id`
+- `repo_full_name`
+- `pr_number`
+- `pr_title`
+- `pr_url`
+- `base_branch`
+- `head_branch`
+- `status`
+- `summary_text`
+- `summary_payload`
+- `risk_score`
+- `divergence_days`
+- `error_message`
+
+### PRAnalysisAuthor
+
+- `analysis_id`
+- `github_login`
+- `name`
+- `email`
+- `commit_count`
+- `additions`
+- `deletions`
+- `inferred_scope`
+- `scope_confidence`
+
+### PRAnalysisCommit
+
+- `analysis_id`
+- `author_id`
+- `sha`
+- `message`
+- `committed_at`
+- `additions`
+- `deletions`
+
+### PRAnalysisFile
+
+- `analysis_id`
+- `author_id`
+- `commit_id`
+- `path`
+- `change_type`
+- `additions`
+- `deletions`
+- `patch`
+- `patch_truncated`
+- `is_schema_change`
+- `out_of_scope`
+- `scope_reason`
+
+### PRChecklistItem
+
+- `analysis_id`
+- `title`
+- `details`
+- `severity`
+- `completed`
+
+### ChatSession y ChatMessage (`models/chat.py`)
+
+`ChatSession`:
+
+- `analysis_id`
+- `user_id`
+
+`ChatMessage`:
+
+- `session_id`
+- `role`
+- `content`
+- `token_count`
 
 ---
 
@@ -243,131 +506,200 @@ Campos comunes:
 
 ### Base (`schemas/base.py`)
 
-- **BaseResponse:** `success`, `message`
-- **SucessWithData:** hereda + `result: Any`
-- **ErrorResponse:** hereda + `err`, `err_code`, `status_code`
+- `BaseResponse`
+- `SucessWithData`
+- `ErrorResponse`
 
 ### User Management (`schemas/user_managment.py`)
 
-- **CurrentUser:** id, name, email, role, status
-- **CreateUserRequest:** name, email, password (validaciones: email válido, password ≥8 chars)
-- **GitHubOAuthRequest:** code, redirect_uri (opcional)
+- `CurrentUser`
+- `CreateUserRequest`
+- `GitHubOAuthRequest`
+- `LoginRequest`
+
+### PR (`schemas/pr.py`)
+
+- `AnalyzePRRequest`
+- `ChecklistItemResponse`
+- `AuthorSummaryResponse`
+- `FileSummaryResponse`
+- `CommitSummaryResponse`
+- `PRAnalysisResponse`
+- `PRHistoryItem`
+
+### Chat (`schemas/chat.py`)
+
+- `ChatRequest`
+- `ChatMessageResponse`
+- `ChatResponse`
+- `ChatHistoryResponse`
 
 ---
 
-## 8. Configuración (`config.py`)
+## 8. Dependencias (`dependencies.py`)
 
-Variables de entorno (Settings con Pydantic):
+| Función | Retorno | Uso |
+|---------|---------|-----|
+| `get_settings()` | `Settings` | Configuración |
+| `get_db_session()` | `AsyncIterator[AsyncSession]` | Sesión DB por request |
+| `get_mail_service()` | `MailService` | Servicio de correo |
+| `get_ai_provider_client()` | `AsyncIterator[AIProviderClient]` | Cliente IA unificado |
+| `get_current_user()` | `CurrentUser` | Usuario autenticado desde cookie |
+| `get_optional_current_user()` | `CurrentUser \| None` | Usuario autenticado opcional |
+| `get_github_client()` | `AsyncIterator[GitHubClient]` | Cliente GitHub del usuario autenticado |
+
+La autenticación se resuelve con la cookie `mergeintel_session`.
+
+---
+
+## 9. Configuración (`config.py`)
+
+Variables principales:
 
 | Variable | Descripción | Default |
 |----------|-------------|---------|
 | `GITHUB_CLIENT_ID` | OAuth GitHub | - |
 | `GITHUB_CLIENT_SECRET` | OAuth GitHub | - |
-| `GITHUB_API_BASE_URL` | API GitHub | https://api.github.com |
+| `GITHUB_WEBHOOK_SECRET` | Firma del webhook | - |
+| `GITHUB_API_BASE_URL` | Base URL de GitHub API | `https://api.github.com` |
+| `GITHUB_TOKEN_ENCRYPTION_KEY` | Clave para cifrar tokens GitHub | - |
+| `AI_PROVIDER` | `groq \| anthropic \| openai \| ollama` | `groq` |
+| `AI_PROVIDER_API_KEY` | API key del provider | - |
+| `AI_MODEL` | Modelo por provider | opcional |
 | `DATABASE_URL` | URL PostgreSQL | requerido |
-| `APP_ENV` | Entorno | development |
-| `APP_PORT` | Puerto | 8000 |
-| `APP_TIMEZONE` | Zona horaria | America/Argentina/Buenos_Aires |
-| `MAIL_*` | Config email | ver config.py |
-| `RESEND_API_KEY` | Producción | - |
-| `AI_PROVIDER` | groq \| anthropic \| openai \| ollama | groq |
-| `AI_PROVIDER_API_KEY` | API key del provider seleccionado | - |
-| `LOG_*` | Logging | INFO, json, etc. |
+| `APP_ENV` | Entorno | `development` |
+| `APP_PORT` | Puerto | `8000` |
+| `APP_TIMEZONE` | Zona horaria | `America/Argentina/Buenos_Aires` |
+| `MAIL_*` | Config email | ver `config.py` |
+| `RESEND_API_KEY` | Resend en producción | - |
+| `LOG_*` | Logging | ver `config.py` |
+
+Validaciones relevantes:
+
+- `AI_PROVIDER` debe ser soportado
+- `GITHUB_TOKEN_ENCRYPTION_KEY` es obligatoria si GitHub OAuth está activo
 
 ---
 
-## 9. Base de Datos
+## 10. Seguridad (`utils/security.py`)
+
+Helpers disponibles:
+
+- `hash_string(value)`
+- `verify_string(value, hashed_value)`
+- `hash_token(value)`
+- `verify_token(value, hashed_value)`
+- `generate_opaque_token()`
+- `encrypt_secret(value, secret_key)`
+- `decrypt_secret(value, secret_key)`
+
+Uso:
+
+- passwords: bcrypt + prehash SHA-256
+- sesiones: token opaco + hash persistido
+- GitHub token: cifrado reversible en DB
+
+---
+
+## 11. Base de Datos y Migraciones
 
 ### Conexión (`db/connection.py`)
 
-- **Motor:** SQLAlchemy async (asyncpg)
-- **Session factory:** `async_sessionmaker` con `expire_on_commit=False`
-- **Lifespan:** `create_session_factory()` al inicio, `close_engine()` al apagado
+- engine async SQLAlchemy
+- `async_sessionmaker`
+- inicialización en lifespan
+- cierre de engine al shutdown
 
 ### Queries (`db/queries.py`)
 
-Helpers para SQL raw:
-- `fetch_one(query, *args)` → primera fila o None
-- `fetch_all(query, *args)` → lista de filas
-- `execute(query, *args)` → ejecuta y commit
-- `execute_many(query, args_list)` → ejecuta múltiples sets de parámetros
+Helpers raw SQL:
 
-Soporta placeholders `$1`, `$2` (asyncpg) convertidos a `:p1`, `:p2`.
+- `fetch_one`
+- `fetch_all`
+- `execute`
+- `execute_many`
+
+### Alembic
+
+Migraciones actuales cubren:
+
+- `user`
+- `OAuthAccount`
+- `user_session`
+- `pr_analysis`
+- `pr_analysis_author`
+- `pr_analysis_commit`
+- `pr_analysis_file`
+- `pr_checklist_item`
+- `chat_session`
+- `chat_message`
 
 ---
 
-## 10. Dependencias (`dependencies.py`)
-
-| Función | Retorno | Uso |
-|---------|---------|-----|
-| `get_settings()` | Settings | Configuración |
-| `get_db_session()` | AsyncIterator[AsyncSession] | Sesión DB por request |
-| `get_mail_service()` | MailService | Servicio de correo |
-| `get_ai_provider_client()` | AsyncIterator[client] | Cliente AI unificado (Groq/Anthropic/OpenAI/Ollama) |
-
----
-
-## 11. Excepciones y Decoradores
+## 12. Logging y Manejo de Errores
 
 ### AppError (`exceptions.py`)
 
-- `message`: str
-- `err_code`: str
-- `status_code`: int
+Contiene:
 
-### handle_controller_errors (`controllers/decorators.py`)
+- `message`
+- `err_code`
+- `status_code`
 
-- Captura `AppError` → ErrorResponse con message/err_code/status_code
-- Captura `IntegrityError` → mapea a ErrorResponse (DUPLICATE_EMAIL, GITHUB_ACCOUNT_ALREADY_LINKED, etc.)
-- Cualquier otra excepción → ErrorResponse 500 con mensaje por defecto
+### handle_controller_errors
 
----
+Maneja:
 
-## 12. Utilidades
+- `AppError`
+- `IntegrityError`
+- excepciones genéricas
 
-### security (`utils/security.py`)
+### Logging (`logging_config.py`)
 
-- `hash_string(value)` → bcrypt (pre-hash SHA-256 para normalizar longitud)
-- `verify_string(value, hashed_value)` → bool
+Soporta:
 
-### text (`utils/text.py`)
-
-- `capitalize_words(value)` → capitaliza cada palabra
-
-### timezone (`timezone.py`)
-
-- `get_app_timezone()` → ZoneInfo
-- `now_in_app_timezone()` → datetime actual en zona configurada
+- formato `json`
+- formato `text`
+- handler stdout
+- handler file rotativo
 
 ---
 
-## 13. Logging (`logging_config.py`)
+## 13. Middleware y Lifespan
 
-- **Formatos:** JSON, text
-- **Handlers:** stdout, file (RotatingFileHandler)
-- **Config:** LOG_LEVEL, LOG_FORMAT, LOG_FILE_PATH, etc.
+### CORS
+
+- `allow_origins=["http://localhost:5173"]`
+- `allow_credentials=True`
+- `allow_methods=["*"]`
+- `allow_headers=["*"]`
+
+### Exception handlers en `main.py`
+
+- `AppError` -> respuesta estructurada
+- excepción no controlada -> `500 Internal server error`
+
+### Startup / Shutdown
+
+1. configura logging
+2. construye mail service
+3. inicializa session factory
+4. deja Mailpit visible en desarrollo
+5. cierra engine al apagar
 
 ---
 
-## 14. Migraciones (Alembic)
+## 14. Estado actual del backend
 
-- **Motor:** async (asyncpg)
-- **Modelos:** User, OAuthAccount (Base metadata)
-- **Ubicación:** `alembic/versions/`
+El backend ya implementa:
 
----
-
-## 15. Middleware y CORS
-
-- **CORS:** `allow_origins=["http://localhost:5173"]`, credentials, métodos y headers permitidos
-- **Exception handler:** Excepciones no manejadas → 500 con `{"detail": "Internal server error"}`
-
----
-
-## 16. Lifespan (Startup/Shutdown)
-
-1. Configurar logging
-2. Construir MailService
-3. Crear session factory (DB)
-4. (Dev) Log de Mailpit en localhost:8025
-5. Al shutdown: cerrar engine de DB
+- autenticación local con sesión persistida
+- registro, login, logout y `/auth/me`
+- OAuth GitHub para create, login y link
+- cifrado de token GitHub en base de datos
+- cliente GitHub reusable
+- análisis completo de PR con persistencia
+- checklist y score de riesgo
+- chat contextual por análisis
+- webhook de GitHub para `pull_request`
+- capa unificada de IA con soporte para `groq`
