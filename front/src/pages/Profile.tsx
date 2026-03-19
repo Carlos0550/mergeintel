@@ -165,7 +165,7 @@ export default function Profile() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-text-secondary text-sm">No GitHub account linked</p>
-                <p className="text-text-muted text-xs mt-0.5">Link your GitHub account to analyze private repositories</p>
+                <p className="text-text-muted text-xs mt-0.5">Link your GitHub account to analyze repositories</p>
               </div>
               <button
                 onClick={handleLinkGitHub}

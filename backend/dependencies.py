@@ -15,7 +15,7 @@ from backend.db.connection import get_session_factory
 from backend.exceptions import AppError
 from backend.models.session import UserSession
 from backend.models.user import OAuthAccount, OauthProviders, User
-from backend.schemas.user_managment import CurrentUser
+from backend.schemas.user_managment import CurrentUser, OAuthAccountSummary
 from backend.services.ai import AIProviderClient, build_ai_provider_client
 from backend.services.github import GitHubClient
 from backend.services.mail import MailService, build_mail_service
@@ -122,12 +122,33 @@ async def _resolve_current_user(
         user_session.is_active = False
         await db.commit()
         return None
+
+    oauth_result = await db.execute(
+        select(OAuthAccount).where(
+            OAuthAccount.user_id == user.id,
+            OAuthAccount.is_active.is_(True),
+        )
+    )
+    oauth_accounts = oauth_result.scalars().all()
+    oauth_summaries = [
+        OAuthAccountSummary(
+            provider=oauth_account.provider.value,
+            provider_login=oauth_account.provider_login,
+        )
+        for oauth_account in oauth_accounts
+    ]
+    github_account = next((item for item in oauth_summaries if item.provider == OauthProviders.GITHUB.value), None)
+
     return CurrentUser(
         id=str(user.id),
         name=user.name,
         email=user.email,
         role=user.role,
         status=user.status,
+        created_at=user.created_at,
+        oauth_accounts=oauth_summaries,
+        github_account=github_account,
+        github_login=github_account.provider_login if github_account else None,
     )
 
 
